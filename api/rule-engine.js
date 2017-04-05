@@ -1,12 +1,10 @@
-var cp = require('child_process');
 var _ = require('lodash');
 const cluster = require('cluster');
 
 cluster.setupMaster({
     exec: __dirname + '/rule-engine-worker.js',
-    silent: true
+    silent: false
 });
-cluster.fork(); // https worker
 
 function createWorker(fact) {
     return new Promise((resolve, reject) => {
@@ -21,6 +19,5 @@ function createWorker(fact) {
 
 export const RunFacts = function(facts) {
     return Promise.all(_.map(facts, (fact) => createWorker(fact)));
-    // return createWorker(facts[0]);
 };
 

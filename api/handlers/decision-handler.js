@@ -1,6 +1,5 @@
 
 const RulesEngine = require('../rule-engine').RunFacts;
-var cp = require('child_process');
 
 export const runFact = {
     auth: false,
