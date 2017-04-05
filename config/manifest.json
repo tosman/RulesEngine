@@ -1,0 +1,52 @@
+{
+  "connections": [
+    {
+      "host": "localhost",
+      "port": 8000,
+      "routes": {
+        "cors": true
+      },
+      "router": {
+        "stripTrailingSlash": true
+      }
+    }
+  ],
+  "registrations": [
+    {
+      "plugin": "./api",
+      "options": {
+        "routes": {
+          "prefix": "/api"
+        }
+      }
+    },
+    { "plugin": "inert" },
+    { "plugin": "hapi-auth-jwt2" },
+    { "plugin": "bell" },
+    {
+      "plugin": {
+        "register": "good",
+        "options": {
+          "ops": {
+            "interval": 60000
+          },
+          "reporters": {
+            "console": [
+              {
+                "module": "good-console",
+                "args": [
+                  {
+                    "events": {
+                      "response": "*"
+                    }
+                  }
+                ]
+              },
+              "stdout"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
