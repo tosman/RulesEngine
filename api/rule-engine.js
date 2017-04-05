@@ -42,7 +42,9 @@ function checkCondition(object, key, condition) {
 
 var rules = [];
 for (let i = 0; i < 100000; i++) {
+
     rules.push({
+        "client": "MedStar",
         "condition": function (R) {
             var age = getRandomInt(1, 100);
             var client = pv.clients[getRandomInt(-1, pv.clients.length)];
@@ -66,18 +68,24 @@ for (let i = 0; i < 100000; i++) {
 
 const rulesEngine = new RuleEngine(rules);
 
+function setupRules(client) {
+    rulesEngine.turn("OFF")
+    rulesEngine.turn("ON", { client })
+}
 
 const RunFact = function (fact) {
     return new Promise((resolve, reject) => {
         rulesEngine.execute(fact, (result, x) => {
             result.approved = !result.result;
-             delete result.result;
+            delete result.result;
 
             resolve(result);
         });
     });
 }
 
- export const RunFacts =  function (facts){
-    return Promise.all(_.map(facts, (fact)=> RunFact(fact)));
+export const RunFacts = function (facts) {
+    setupRules("MedStar"); //TODO: Change to client from somewhere
+    return Promise.all(_.map(facts, (fact) => RunFact(fact)));
 }
+
