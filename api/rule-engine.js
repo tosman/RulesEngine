@@ -1,12 +1,5 @@
-var _ = require("lodash")
+var _ = require('lodash');
 var RuleEngine = require('node-rules');
-
-var propMapper = {
-    clients: 'client',
-    authTypes: 'authType',
-    procCodes: 'procedureCode',
-    gender: 'gender'
-}
 
 var pv = {
     clients: [
@@ -17,18 +10,17 @@ var pv = {
         'MFC'
     ],
     authTypes: ['Inpatient', 'Outpatient', 'DME'],
-    procCodes: [
-        'T1002',
-        '52005',
-        '95807',
-        '77085',
-        'K0008', 'E0980', 'E1029'],
+    procCodes: {
+        T1002: 1,
+        52005: 1,
+        95807: 1,
+        77085: 1,
+        K0008: 1,
+        E0980: 1,
+        E1029: 1
+    },
     gender: ['M', 'F']
-}
-
-function ReviewLine(reviewline) {
-    _.assign(this, reviewline)
-}
+};
 
 function getRandomInt(min, max) {
     min = Math.ceil(min);
@@ -36,44 +28,40 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
-function checkCondition(object, key, condition) {
-    return object[key] == condition
-}
-
 var rules = [];
-for (let i = 0; i < 100000; i++) {
-
+for (let i = 0; i < 1000; i++) {
     rules.push({
-        "client": "MedStar",
-        "condition": function (R) {
+        client: 'MedStar',
+        condition: function(R) {
             var age = getRandomInt(1, 100);
             var client = pv.clients[getRandomInt(-1, pv.clients.length)];
             var authType = pv.authTypes[getRandomInt(-1, pv.authTypes.length)];
-            var procedureCode = pv.procCodes[getRandomInt(-1, pv.procCodes.length)];
             var gender = pv.gender[getRandomInt(-1, pv.gender.length)];
 
-            R.when(this && this.client == client
-                && this.authType == authType
-                && this.procedureCode == procedureCode
-                && this.gender == gender
-                && this.age < age);
+            R.when(
+                this &&
+                this.client === client &&
+                this.authType === authType &&
+                pv.procCodes[this.procedureCode] &&
+                this.gender === gender &&
+                this.age < age
+            );
         },
-        "consequence": function (R) {
+        consequence: function(R) {
             this.result = false;
             R.stop();
         }
-    })
+    });
 }
-
 
 const rulesEngine = new RuleEngine(rules);
 
 function setupRules(client) {
-    rulesEngine.turn("OFF")
-    rulesEngine.turn("ON", { client })
+    rulesEngine.turn('OFF');
+    rulesEngine.turn('ON', { client });
 }
 
-const RunFact = function (fact) {
+const RunFact = function(fact) {
     return new Promise((resolve, reject) => {
         rulesEngine.execute(fact, (result, x) => {
             result.approved = !result.result;
@@ -82,10 +70,10 @@ const RunFact = function (fact) {
             resolve(result);
         });
     });
-}
+};
 
-export const RunFacts = function (facts) {
-    setupRules("MedStar"); //TODO: Change to client from somewhere
+export const RunFacts = function(facts) {
+    setupRules('MedStar'); // TODO: Change to client from somewhere
     return Promise.all(_.map(facts, (fact) => RunFact(fact)));
-}
+};
 
