@@ -1,5 +1,5 @@
 var _ = require('lodash');
-var RuleEngine = require('node-rules');
+var nools = require("nools");
 
 var pv = {
     clients: [
@@ -22,6 +22,10 @@ var pv = {
     gender: ['M', 'F']
 };
 
+function ReviewLine(review) {
+    _.assign(this, review);
+}
+
 function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -29,51 +33,73 @@ function getRandomInt(min, max) {
 }
 
 var rules = [];
-for (let i = 0; i < 1000; i++) {
-    rules.push({
-        client: 'MedStar',
-        condition: function(R) {
-            var age = getRandomInt(1, 100);
-            var client = pv.clients[getRandomInt(-1, pv.clients.length)];
-            var authType = pv.authTypes[getRandomInt(-1, pv.authTypes.length)];
-            var gender = pv.gender[getRandomInt(-1, pv.gender.length)];
+var flow = nools.flow("Hello World", function (flow) {
+    for (let i = 0; i < 10000; i++) {
+        var age = getRandomInt(1, 100);
+        var client = pv.clients[getRandomInt(-1, pv.clients.length)];
+        var authType = pv.authTypes[getRandomInt(-1, pv.authTypes.length)];
+        var gender = pv.gender[getRandomInt(-1, pv.gender.length)];
 
-            R.when(
-                this &&
-                this.client === client &&
-                this.authType === authType &&
-                pv.procCodes[this.procedureCode] &&
-                this.gender === gender &&
-                this.age < age
-            );
-        },
-        consequence: function(R) {
-            this.result = false;
-            R.stop();
+        var attrs = {
+            client: {
+                operator: '==',
+                value: client
+            },
+            age: {
+                operator: '<',
+                value: age
+            },
+            authType: {
+                operator: '==',
+                value: authType
+            },
+            gender: {
+                operator: '==',
+                value: gender
+            }
         }
-    });
-}
 
-const rulesEngine = new RuleEngine(rules);
+        let matchString = generateMatchString(attrs, 'rl');
+        //find any message that is exactly hello world
+        flow.rule(i, [ReviewLine, "rl", matchString], function (facts) {
+            _.assign(facts.rl, { approved: true, matchRule: i })
 
-function setupRules(client) {
-    rulesEngine.turn('OFF');
-    rulesEngine.turn('ON', { client });
-}
-
-const RunFact = function(fact) {
-    return new Promise((resolve, reject) => {
-        rulesEngine.execute(fact, (result, x) => {
-            result.approved = !result.result;
-            delete result.result;
-
-            resolve(result);
+            // this.halt();
         });
+    }
+});
+
+function generateMatchString(attrs, objName) {
+    return _.reduce(attrs, (result, value, key) => {
+        if (!value.value) return result;
+
+        if (result) result += ' && ';
+        return result += `${objName}.${key} ${value.operator} "${value.value}"`
+    }, '')
+}
+
+const RunFact = function (facts) {
+    return new Promise((resolve, reject) => {
+        let session = flow.getSession();
+
+        _.forEach(facts, (fact) => {
+            session.assert(new ReviewLine(fact))
+        });
+
+        session.matchUntilHalt().then((someVal) => {
+            resolve(facts);
+        }, function () {
+            resolve(facts);
+        });
+
+        resolve(facts);
+
+
     });
 };
 
-export const RunFacts = function(facts) {
-    setupRules('MedStar'); // TODO: Change to client from somewhere
-    return Promise.all(_.map(facts, (fact) => RunFact(fact)));
+export const RunFacts = function (facts) {
+    // return Promise.all(_.map(facts, (fact) => RunFact(fact)));
+    return RunFact(facts)
 };
 
